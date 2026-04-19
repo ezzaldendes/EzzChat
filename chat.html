@@ -3,55 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ezz Chat | الدردشة</title>
+    <title>Ezz Chat | الأقسام</title>
     <style>
-        :root { --primary: #075e54; --bg-gray: #f4f4f4; }
-        body { font-family: sans-serif; margin: 0; background: var(--bg-gray); height: 100vh; display: flex; justify-content: center; }
+        :root { --primary: #075e54; --bg: #f4f4f4; }
+        body { font-family: sans-serif; margin: 0; background: var(--bg); height: 100vh; display: flex; justify-content: center; }
         .app-container { width: 100%; max-width: 500px; background: white; display: flex; flex-direction: column; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
         
-        /* الهيدر */
-        .header { background: var(--primary); color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-        .user-info b { font-size: 16px; display: block; }
-        .user-info span { font-size: 11px; opacity: 0.8; }
+        .header { background: var(--primary); color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* واجهة اختيار الغرف */
+        #rooms-menu { padding: 20px; display: flex; flex-direction: column; gap: 15px; flex-grow: 1; }
+        .room-card { background: #fff; padding: 20px; border-radius: 15px; border: 1px solid #ddd; cursor: pointer; display: flex; align-items: center; gap: 15px; transition: 0.2s; }
+        .room-card:hover { border-color: var(--primary); background: #f0fdf4; }
+        .room-icon { font-size: 30px; }
 
-        /* منطقة الرسائل */
-        #chat-flow { flex-grow: 1; overflow-y: auto; padding: 15px; background-color: var(--bg-gray); }
-        .message { background: white; padding: 12px; border-radius: 12px; margin-bottom: 10px; max-width: 85%; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #eee; position: relative; }
-        .message b { color: var(--primary); font-size: 13px; display: block; margin-bottom: 4px; }
-        .del-msg { color: #d9534f; font-size: 11px; cursor: pointer; margin-top: 5px; display: block; text-align: left; }
+        /* واجهة الشات */
+        #chat-window { display: none; flex-direction: column; flex-grow: 1; height: 100%; }
+        #chat-flow { flex-grow: 1; overflow-y: auto; padding: 15px; background: var(--bg); }
+        .message { background: white; padding: 10px 15px; border-radius: 12px; margin-bottom: 8px; max-width: 85%; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .message b { color: var(--primary); font-size: 12px; display: block; }
 
-        /* شريط الإدخال */
         .input-area { padding: 10px; background: #fff; display: flex; gap: 8px; border-top: 1px solid #eee; }
-        input { flex-grow: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; font-size: 16px; }
-        .send-btn { background: var(--primary); color: white; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+        input { flex-grow: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
+        .send-btn { background: var(--primary); color: white; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div class="app-container">
     <div class="header">
-        <div class="user-info">
-            <b id="display-name">جاري التحميل...</b>
-            <span id="display-role">الرتبة...</span>
-        </div>
+        <span id="nav-title">Ezz Chat 🏗️</span>
         <div style="display: flex; gap: 10px;">
-            <button onclick="window.location.href='profile.html'" style="background:none; border:none; font-size:20px; cursor:pointer; color:white;">⚙️</button>
-            <button id="logout-btn" style="background:none; border:none; font-size:20px; cursor:pointer; color:white;">🚪</button>
+            <button onclick="location.reload()" id="back-btn" style="display:none; background:none; border:none; color:white; font-size:20px;">⬅️</button>
+            <button onclick="window.location.href='profile.html'" style="background:none; border:none; color:white; font-size:20px;">⚙️</button>
         </div>
     </div>
 
-    <div id="chat-flow"></div>
+    <div id="rooms-menu">
+        <h3 style="text-align: center; color: #555;">اختر القسم الدراسي</h3>
+        <div class="room-card" onclick="joinRoom('general', 'الدردشة العامة 🌍')">
+            <span class="room-icon">💬</span>
+            <div><b>الدردشة العامة</b><br><small>لجميع الطلاب</small></div>
+        </div>
+        <div class="room-card" onclick="joinRoom('arch', 'قسم العمارة 📐')">
+            <span class="room-icon">🏗️</span>
+            <div><b>قسم الهندسة المعمارية</b><br><small>نقاشات التصميم والمشاريع</small></div>
+        </div>
+        <div class="room-card" onclick="joinRoom('design', 'قسم الجرافيك 🎨')">
+            <span class="room-icon">🎨</span>
+            <div><b>قسم الجرافيك ديزاين</b><br><small>الإبداع والألوان</small></div>
+        </div>
+    </div>
 
-    <div class="input-area">
-        <input type="text" id="msg-input" placeholder="اكتب رسالتك هنا...">
-        <button class="send-btn" id="send-btn">➤</button>
+    <div id="chat-window">
+        <div id="chat-flow"></div>
+        <div class="input-area">
+            <input type="text" id="msg-input" placeholder="اكتب هنا...">
+            <button class="send-btn" id="send-btn">➤</button>
+        </div>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyAdKs4FczUGJYh-_uzfEzndocEx-x1VDAA",
@@ -66,37 +82,42 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    let myData = { name: "مستخدم", role: "user" };
+    let myData = null;
+    let currentRoom = "";
+    let unsubscribe = null;
 
     onAuthStateChanged(auth, async (user) => {
         if (!user) { window.location.href = "index.html"; return; }
-        
         const snap = await getDoc(doc(db, "users", user.uid));
-        if (snap.exists()) {
-            myData = snap.data();
-            document.getElementById('display-name').innerText = myData.name;
-            document.getElementById('display-role').innerText = myData.role === 'owner' ? 'المالك' : 'عضو';
-        } else {
-            document.getElementById('display-name').innerText = user.email.split('@')[0];
-            document.getElementById('display-role').innerText = "بروفايل غير مكتمل ⚠️";
-        }
-        loadMessages();
+        myData = snap.exists() ? snap.data() : { name: user.email.split('@')[0] };
     });
 
+    window.joinRoom = (roomId, roomName) => {
+        currentRoom = roomId;
+        document.getElementById('rooms-menu').style.display = 'none';
+        document.getElementById('chat-window').style.display = 'flex';
+        document.getElementById('nav-title').innerText = roomName;
+        document.getElementById('back-btn').style.display = 'block';
+        loadMessages();
+    };
+
     function loadMessages() {
-        const q = query(collection(db, "messages"), orderBy("createdAt", "asc"));
-        onSnapshot(q, (snapshot) => {
+        if (unsubscribe) unsubscribe();
+        const q = query(
+            collection(db, "rooms", currentRoom, "messages"),
+            orderBy("createdAt", "desc"),
+            limit(30)
+        );
+
+        unsubscribe = onSnapshot(q, (snapshot) => {
             const flow = document.getElementById('chat-flow');
+            const msgs = [];
+            snapshot.forEach(d => msgs.push(d.data()));
             flow.innerHTML = "";
-            snapshot.forEach(res => {
-                const m = res.data();
+            msgs.reverse().forEach(m => {
                 const div = document.createElement('div');
                 div.className = 'message';
-                
-                const canDelete = myData.role === 'owner' || m.senderId === auth.currentUser.uid;
-                let delBtn = canDelete ? `<span class="del-msg" onclick="deleteMsg('${res.id}')">حذف 🗑️</span>` : "";
-
-                div.innerHTML = `<b>${m.senderName}</b>${m.text}${delBtn}`;
+                div.innerHTML = `<b>${m.senderName}</b>${m.text}`;
                 flow.appendChild(div);
             });
             flow.scrollTop = flow.scrollHeight;
@@ -105,21 +126,14 @@
 
     document.getElementById('send-btn').onclick = async () => {
         const inp = document.getElementById('msg-input');
-        if(!inp.value.trim()) return;
-        await addDoc(collection(db, "messages"), {
+        if(!inp.value.trim() || !currentRoom) return;
+        await addDoc(collection(db, "rooms", currentRoom, "messages"), {
             text: inp.value,
-            senderId: auth.currentUser.uid,
-            senderName: myData.name || "مجهول",
+            senderName: myData.name,
             createdAt: serverTimestamp()
         });
         inp.value = "";
     };
-
-    window.deleteMsg = async (id) => {
-        if(confirm("هل تريد حذف الرسالة؟")) await deleteDoc(doc(db, "messages", id));
-    };
-
-    document.getElementById('logout-btn').onclick = () => signOut(auth);
 </script>
 </body>
 </html>
