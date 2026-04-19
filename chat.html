@@ -1,20 +1,198 @@
-<div class="chat-layout">
-    <nav class="rooms-sidebar">
-        <div class="room-item active" data-room="general">العامة</div>
-        <div class="room-item" data-room="architecture">العمارة</div>
-        <div class="room-item" data-room="design">الجرافيك</div>
-    </nav>
-    
-    <main class="chat-area">
-        <header>
-            <span id="user-info">جاري التحميل...</span>
-            <a href="admin.html" id="admin-link" style="display:none; color: gold;">لوحة الإدارة</a>
-        </header>
-        <div id="messages-container"></div>
-        <div class="input-box">
-            <input type="text" id="msg-input">
-            <button id="send-btn">إرسال</button>
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>غرف الدردشة | Ezz Chat Pro</title>
+    <style>
+        :root { --primary: #075e54; --owner: #d9534f; --mod: #0275d8; --user: #555; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; background: #e5ddd5; display: flex; justify-content: center; height: 100vh; }
+        .chat-app { width: 100%; max-width: 600px; background: white; display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+        
+        /* الهيدر وشريط الغرف */
+        .header { background: var(--primary); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .rooms-bar { background: #2c3e50; display: flex; overflow-x: auto; padding: 10px; gap: 10px; }
+        .room-btn { background: #34495e; color: white; padding: 8px 15px; border-radius: 20px; cursor: pointer; white-space: nowrap; font-size: 14px; border: none; }
+        .room-btn.active { background: var(--primary); }
+
+        /* منطقة الرسائل */
+        #messages-area { flex-grow: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
+        .msg-card { background: white; padding: 12px; border-radius: 12px; margin-bottom: 12px; max-width: 85%; position: relative; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .msg-header { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+        
+        /* الرتب */
+        .badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; color: white; font-weight: bold; }
+        .badge-owner { background: var(--owner); }
+        .badge-mod { background: var(--mod); }
+        
+        /* أدوات الإشراف */
+        .mod-tools { margin-top: 8px; border-top: 1px solid #eee; padding-top: 5px; display: flex; gap: 10px; }
+        .tool-btn { font-size: 11px; cursor: pointer; color: var(--owner); background: none; border: none; padding: 0; }
+
+        /* منطقة الإدخال */
+        .input-box { padding: 15px; background: #f0f0f0; display: flex; gap: 10px; }
+        .input-box input { flex-grow: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
+        .send-btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="chat-app">
+    <div class="header">
+        <div>
+            <b id="my-name">جاري التحميل...</b>
+            <span id="my-role-badge"></span>
         </div>
-    </main>
+        <div style="display: flex; gap: 10px;">
+            <button id="admin-panel-btn" onclick="window.location.href='admin.html'" style="display:none; background:orange; border:none; border-radius:5px; cursor:pointer; color:black; padding:5px;">لوحة الإدارة ⚙️</button>
+            <button onclick="logout()" style="background:transparent; border:1px solid white; color:white; cursor:pointer; border-radius:5px;">خروج</button>
+        </div>
+    </div>
+
+    <div class="rooms-bar" id="rooms-list">
+        <button class="room-btn active" onclick="changeRoom('عام', this)">الغرفة العامة</button>
+        <button class="room-btn" onclick="changeRoom('عمارة', this)">قسم العمارة</button>
+        <button class="room-btn" onclick="changeRoom('تصميم', this)">جرافيك ديزاين</button>
+    </div>
+
+    <div id="messages-area"></div>
+
+    <div class="input-box">
+        <input type="text" id="msg-input" placeholder="اكتب رسالتك هنا...">
+        <button class="send-btn" id="send-btn">إرسال</button>
+    </div>
 </div>
 
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, where, doc, getDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAdKs4FczUGJYh-_uzfEzndocEx-x1VDAA",
+        authDomain: "ezzchat-org.firebaseapp.com",
+        projectId: "ezzchat-org",
+        storageBucket: "ezzchat-org.firebasestorage.app",
+        messagingSenderId: "704328739546",
+        appId: "1:704328739546:web:57cb68963c10e27c9293e3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const OWNER_EMAIL = "ezzaldendahan@gmail.com";
+    let userData = null;
+    let currentRoom = "عام";
+    let unsubscribe = null;
+
+    // فحص حالة الدخول
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+            window.location.href = "index.html";
+            return;
+        }
+        
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists()) {
+            userData = userSnap.data();
+            if (userData.status === 'banned') {
+                alert("عذراً، هذا الحساب محظور.");
+                signOut(auth);
+                return;
+            }
+            
+            document.getElementById('my-name').innerText = userData.name;
+            if (userData.role === 'owner') {
+                document.getElementById('my-role-badge').innerHTML = '<span class="badge badge-owner">المالك</span>';
+                document.getElementById('admin-panel-btn').style.display = 'block';
+            } else if (userData.role === 'mod') {
+                document.getElementById('my-role-badge').innerHTML = '<span class="badge badge-mod">مشرف</span>';
+            }
+            
+            loadMessages();
+        }
+    });
+
+    // تبديل الغرف
+    window.changeRoom = (roomName, btn) => {
+        currentRoom = roomName;
+        document.querySelectorAll('.room-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        loadMessages();
+    };
+
+    // إرسال الرسائل
+    document.getElementById('send-btn').onclick = async () => {
+        if (userData.status === 'muted') return alert("لا يمكنك الإرسال لأنك تحت الكتم حالياً.");
+        const input = document.getElementById('msg-input');
+        if (input.value.trim()) {
+            await addDoc(collection(db, "messages"), {
+                text: input.value,
+                senderId: auth.currentUser.uid,
+                senderName: userData.name,
+                senderRole: userData.role,
+                room: currentRoom,
+                createdAt: serverTimestamp()
+            });
+            input.value = "";
+        }
+    };
+
+    // تحميل الرسائل مع أدوات التحكم
+    function loadMessages() {
+        if (unsubscribe) unsubscribe();
+        const q = query(collection(db, "messages"), where("room", "==", currentRoom), orderBy("createdAt", "asc"));
+        
+        unsubscribe = onSnapshot(q, (snapshot) => {
+            const area = document.getElementById('messages-area');
+            area.innerHTML = "";
+            snapshot.forEach(docSnap => {
+                const m = docSnap.data();
+                const div = document.createElement('div');
+                div.className = 'msg-card';
+                
+                // تحديد الصلاحيات على هذه الرسالة
+                const isOwner = userData.role === 'owner';
+                const isMod = userData.role === 'mod';
+                const canControl = isOwner || (isMod && m.senderRole === 'user');
+
+                let badgeHtml = m.senderRole === 'owner' ? '<span class="badge badge-owner">مالك</span>' : (m.senderRole === 'mod' ? '<span class="badge badge-mod">مشرف</span>' : '');
+                
+                let controls = canControl ? `
+                    <div class="mod-tools">
+                        <button class="tool-btn" onclick="deleteMsg('${docSnap.id}')">حذف 🗑️</button>
+                        <button class="tool-btn" onclick="muteUser('${m.senderId}')">كتم 🔇</button>
+                    </div>` : "";
+
+                div.innerHTML = `
+                    <div class="msg-header">
+                        <b style="color:var(--primary)">${m.senderName}</b> ${badgeHtml}
+                    </div>
+                    <div>${m.text}</div>
+                    ${controls}
+                `;
+                area.appendChild(div);
+            });
+            area.scrollTop = area.scrollHeight;
+        });
+    }
+
+    // وظائف الإشراف
+    window.deleteMsg = async (id) => {
+        if (confirm("هل تريد حذف الرسالة؟")) await deleteDoc(doc(db, "messages", id));
+    };
+
+    window.muteUser = async (uid) => {
+        if (confirm("هل تريد كتم هذا العضو؟")) {
+            await updateDoc(doc(db, "users", uid), { status: 'muted' });
+            alert("تم الكتم بنجاح.");
+        }
+    };
+
+    window.logout = () => signOut(auth).then(() => window.location.href = "index.html");
+</script>
+</body>
+</html>
