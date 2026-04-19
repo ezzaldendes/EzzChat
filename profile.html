@@ -5,64 +5,56 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>الملف الشخصي | Ezz Chat</title>
     <style>
-        :root { --primary: #075e54; --bg: #f4f4f4; --text: #333; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        :root { --primary: #075e54; --bg: #f4f4f4; }
+        body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; }
         .profile-card { background: white; width: 100%; max-width: 400px; border-radius: 20px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-        
-        .header-title { text-align: center; color: var(--primary); margin-bottom: 30px; }
-        
+        h3 { text-align: center; color: var(--primary); }
         .info-item { position: relative; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        .info-item label { display: block; font-size: 12px; color: #888; margin-bottom: 5px; }
-        .info-item input { width: 90%; border: none; font-size: 16px; color: var(--text); outline: none; background: none; font-weight: 500; }
-        .edit-icon { position: absolute; left: 0; top: 50%; transform: translateY(-50%); color: var(--primary); font-size: 18px; cursor: pointer; }
-
-        .action-btns { margin-top: 30px; }
-        .btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; margin-bottom: 10px; transition: 0.3s; font-size: 15px; }
+        label { display: block; font-size: 12px; color: #888; margin-bottom: 5px; }
+        input { width: 90%; border: none; font-size: 16px; outline: none; background: none; font-weight: 500; }
+        .edit-icon { position: absolute; left: 0; top: 50%; transform: translateY(-50%); color: var(--primary); font-size: 18px; }
+        .btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; margin-bottom: 10px; font-size: 15px; }
         .btn-save { background: var(--primary); color: white; }
         .btn-pass { background: #fff; color: #d9534f; border: 1px solid #d9534f; }
         .btn-back { background: #eee; color: #666; }
-        
-        #status-toast { text-align: center; font-size: 13px; padding: 10px; border-radius: 8px; margin-bottom: 15px; display: none; }
+        #loading-overlay { text-align: center; color: var(--primary); font-size: 14px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
 <div class="profile-card">
-    <div class="header-title">
-        <h3>إعدادات الحساب ⚙️</h3>
-    </div>
-
-    <div id="status-toast"></div>
+    <h3>إعدادات الحساب ⚙️</h3>
+    <div id="loading-overlay">جاري فحص البيانات...</div>
 
     <div class="info-item">
         <label>الاسم الكامل</label>
-        <input type="text" id="edit-name" value="جاري التحميل...">
+        <input type="text" id="edit-name" placeholder="أدخل اسمك">
         <span class="edit-icon">✎</span>
     </div>
 
     <div class="info-item">
         <label>اسم المستخدم</label>
-        <input type="text" id="edit-username" value="...">
+        <input type="text" id="edit-username" placeholder="مثلاً: ezz_2026">
         <span class="edit-icon">✎</span>
     </div>
 
     <div class="info-item">
         <label>البريد الإلكتروني</label>
-        <input type="email" id="edit-email" value="...">
+        <input type="email" id="edit-email" placeholder="email@example.com">
         <span class="edit-icon">✎</span>
     </div>
 
-    <div class="action-btns">
+    <div style="margin-top: 20px;">
         <button class="btn btn-save" id="save-all">حفظ التغييرات</button>
-        <button class="btn btn-pass" id="change-pass-trigger">تغيير كلمة السر 🔑</button>
-        <button class="btn btn-back" onclick="window.location.href='chat.html'">العودة للدردشة</button>
+        <button class="btn btn-pass" id="change-pass">تغيير كلمة السر 🔑</button>
+        <button class="btn btn-back" onclick="window.location.href='chat.html'">رجوع</button>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, updateEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyAdKs4FczUGJYh-_uzfEzndocEx-x1VDAA",
@@ -77,65 +69,60 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // جلب البيانات عند الفتح
     onAuthStateChanged(auth, async (user) => {
-        if (!user) return;
-        const snap = await getDoc(doc(db, "users", user.uid));
-        if (snap.exists()) {
-            document.getElementById('edit-name').value = snap.data().name;
-            document.getElementById('edit-username').value = snap.data().username;
+        if (!user) { window.location.href = "index.html"; return; }
+        
+        try {
+            const snap = await getDoc(doc(db, "users", user.uid));
+            if (snap.exists()) {
+                document.getElementById('edit-name').value = snap.data().name || "";
+                document.getElementById('edit-username').value = snap.data().username || "";
+            } else {
+                // إذا كان الحساب قديماً ولا يوجد له ملف في Firestore
+                document.getElementById('edit-name').value = user.displayName || "مستخدم جديد";
+                document.getElementById('edit-username').value = user.email.split('@')[0];
+            }
             document.getElementById('edit-email').value = user.email;
+            document.getElementById('loading-overlay').style.display = 'none';
+        } catch (e) {
+            document.getElementById('loading-overlay').innerText = "خطأ في جلب البيانات";
         }
     });
 
-    // دالة إظهار التنبيه
-    function showToast(msg, isError = false) {
-        const t = document.getElementById('status-toast');
-        t.innerText = msg;
-        t.style.display = 'block';
-        t.style.background = isError ? '#ffebee' : '#e8f5e9';
-        t.style.color = isError ? '#c62828' : '#2e7d32';
-        setTimeout(() => t.style.display = 'none', 3000);
-    }
-
-    // زر الحفظ العام
     document.getElementById('save-all').onclick = async () => {
         const user = auth.currentUser;
-        const name = document.getElementById('edit-name').value;
-        const userN = document.getElementById('edit-username').value;
-        const email = document.getElementById('edit-email').value;
-
-        const pass = prompt("لتأكيد الحفظ، أدخل كلمة المرور الحالية:");
+        const pass = prompt("أدخل كلمة المرور الحالية لتأكيد الحفظ:");
         if (!pass) return;
 
         try {
             const cred = EmailAuthProvider.credential(user.email, pass);
             await reauthenticateWithCredential(user, cred);
 
-            if (email !== user.email) await updateEmail(user, email);
+            const emailVal = document.getElementById('edit-email').value;
+            if (emailVal !== user.email) await updateEmail(user, emailVal);
 
-            await updateDoc(doc(db, "users", user.uid), {
-                name: name,
-                username: userN,
-                email: email,
+            // استخدام setDoc مع merge لضمان إنشاء الملف إذا لم يكن موجوداً
+            await setDoc(doc(db, "users", user.uid), {
+                name: document.getElementById('edit-name').value,
+                username: document.getElementById('edit-username').value,
+                email: emailVal,
                 status: "active"
-            });
-            showToast("✅ تم تحديث البيانات بنجاح");
-        } catch (e) { showToast("❌ خطأ: " + e.message, true); }
+            }, { merge: true });
+
+            alert("✅ تم التحديث بنجاح!");
+        } catch (e) { alert("❌ خطأ: " + e.message); }
     };
 
-    // زر تغيير كلمة السر فقط
-    document.getElementById('change-pass-trigger').onclick = async () => {
-        const oldP = prompt("أدخل كلمة المرور الحالية:");
-        const newP = prompt("أدخل كلمة المرور الجديدة (6 أحرف على الأقل):");
-        
+    document.getElementById('change-pass').onclick = async () => {
+        const oldP = prompt("كلمة المرور الحالية:");
+        const newP = prompt("كلمة المرور الجديدة (6 رموز على الأقل):");
         if (oldP && newP) {
             try {
                 const cred = EmailAuthProvider.credential(auth.currentUser.email, oldP);
                 await reauthenticateWithCredential(auth.currentUser, cred);
                 await updatePassword(auth.currentUser, newP);
-                showToast("✅ تم تغيير كلمة السر بنجاح");
-            } catch (e) { showToast("❌ فشل التغيير: " + e.message, true); }
+                alert("✅ تم تغيير كلمة السر");
+            } catch (e) { alert("❌ فشل: " + e.message); }
         }
     };
 </script>
