@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>لوحة تحكم المالك | Ezz Chat</title>
+    <style>
+        :root { --admin: #d9534f; --mod: #0275d8; }
+        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; }
+        .user-card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .role-owner { color: var(--admin); font-weight: bold; }
+        .role-mod { color: var(--mod); font-weight: bold; }
+        button { cursor: pointer; padding: 5px 10px; border-radius: 4px; border: 1px solid #ddd; margin-right: 5px; }
+        .btn-promo { background: #5cb85c; color: white; }
+        .btn-ban { background: #d9534f; color: white; }
+    </style>
+</head>
+<body>
+    <h2>إدارة المستخدمين 🛡️</h2>
+    <div id="users-list">جاري تحميل القائمة...</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, onSnapshot, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = { /* ضع بياناتك هنا */ };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const OWNER_EMAIL = "ezzaldendahan@gmail.com";
+
+    onAuthStateChanged(auth, async (user) => {
+        if (!user || user.email !== OWNER_EMAIL) {
+            alert("غير مسموح لك بالدخول هنا!");
+            window.location.href = "index.html";
+            return;
+        }
+        loadUsers();
+    });
+
+    function loadUsers() {
+        onSnapshot(collection(db, "users"), (snapshot) => {
+            const list = document.getElementById('users-list');
+            list.innerHTML = "";
+            snapshot.forEach(uDoc => {
+                const u = uDoc.data();
+                if (u.email === OWNER_EMAIL) return; // تخطي المالك نفسه
+
+                const card = document.createElement('div');
+                card.className = "user-card";
+                card.innerHTML = `
+                    <div>
+                        <b>${u.name}</b> (@${u.username}) <br>
+                        <small>الرتبة: <span class="role-${u.role}">${u.role === 'mod' ? 'مشرف' : 'عضو'}</span></small>
+                    </div>
+                    <div>
+                        <button class="btn-promo" onclick="updateRole('${uDoc.id}', '${u.role === 'mod' ? 'user' : 'mod'}')">
+                            ${u.role === 'mod' ? 'سحب الإشراف' : 'ترقية لمشرف'}
+                        </button>
+                        <button class="btn-ban" onclick="toggleBan('${uDoc.id}', '${u.status}')">
+                            ${u.status === 'banned' ? 'إلغاء الحظر' : 'حظر'}
+                        </button>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        });
+    }
+
+    window.updateRole = async (id, newRole) => {
+        await updateDoc(doc(db, "users", id), { role: newRole });
+        alert("تم تحديث الرتبة بنجاح");
+    };
+
+    window.toggleBan = async (id, currentStatus) => {
+        const newStatus = currentStatus === 'banned' ? 'active' : 'banned';
+        await updateDoc(doc(db, "users", id), { status: newStatus });
+        alert("تم تغيير حالة الحساب");
+    };
+</script>
+</body>
+</html>
