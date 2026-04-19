@@ -3,55 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ezz Chat Pro</title>
+    <title>Ezz Chat | الدردشة</title>
     <style>
-        :root { --primary: #075e54; --owner: #d9534f; --mod: #0275d8; }
-        body { font-family: sans-serif; margin: 0; background: #e5ddd5; height: 100vh; display: flex; justify-content: center; }
-        .chat-container { width: 100%; max-width: 500px; background: white; display: flex; flex-direction: column; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        :root { --primary: #075e54; --bg-gray: #f4f4f4; }
+        body { font-family: sans-serif; margin: 0; background: var(--bg-gray); height: 100vh; display: flex; justify-content: center; }
+        .app-container { width: 100%; max-width: 500px; background: white; display: flex; flex-direction: column; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
         
         /* الهيدر */
         .header { background: var(--primary); color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-        .user-meta { display: flex; flex-direction: column; }
-        .user-meta b { font-size: 16px; }
-        .role-badge { font-size: 10px; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px; width: fit-content; }
+        .user-info b { font-size: 16px; display: block; }
+        .user-info span { font-size: 11px; opacity: 0.8; }
 
-        /* الأزرار */
-        .icon-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 5px; }
-        
         /* منطقة الرسائل */
-        #msg-flow { flex-grow: 1; overflow-y: auto; padding: 15px; background: #e5ddd5 url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
-        .msg { background: white; padding: 10px; border-radius: 10px; margin-bottom: 10px; max-width: 85%; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .msg b { color: var(--primary); font-size: 13px; }
-        
-        /* الأدوات */
-        .mod-tools { display: flex; gap: 10px; margin-top: 5px; border-top: 1px solid #eee; padding-top: 5px; font-size: 12px; }
-        .del-btn { color: red; cursor: pointer; }
+        #chat-flow { flex-grow: 1; overflow-y: auto; padding: 15px; background-color: var(--bg-gray); }
+        .message { background: white; padding: 12px; border-radius: 12px; margin-bottom: 10px; max-width: 85%; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #eee; position: relative; }
+        .message b { color: var(--primary); font-size: 13px; display: block; margin-bottom: 4px; }
+        .del-msg { color: #d9534f; font-size: 11px; cursor: pointer; margin-top: 5px; display: block; text-align: left; }
 
-        /* الإدخال */
-        .footer { padding: 10px; background: #f0f0f0; display: flex; gap: 8px; }
-        input { flex-grow: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
-        .send-btn { background: var(--primary); color: white; border: none; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; font-size: 18px; }
+        /* شريط الإدخال */
+        .input-area { padding: 10px; background: #fff; display: flex; gap: 8px; border-top: 1px solid #eee; }
+        input { flex-grow: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; font-size: 16px; }
+        .send-btn { background: var(--primary); color: white; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
-<div class="chat-container">
+<div class="app-container">
     <div class="header">
-        <div class="user-meta">
-            <b id="user-display">جاري التحميل...</b>
-            <span id="role-text" class="role-badge">تحميل الرتبة...</span>
+        <div class="user-info">
+            <b id="display-name">جاري التحميل...</b>
+            <span id="display-role">الرتبة...</span>
         </div>
-        <div style="display: flex; gap: 5px;">
-            <button class="icon-btn" onclick="window.location.href='admin.html'" id="admin-icon" style="display:none;">🛡️</button>
-            <button class="icon-btn" onclick="window.location.href='profile.html'">⚙️</button>
-            <button class="icon-btn" id="logout-btn">🚪</button>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="window.location.href='profile.html'" style="background:none; border:none; font-size:20px; cursor:pointer; color:white;">⚙️</button>
+            <button id="logout-btn" style="background:none; border:none; font-size:20px; cursor:pointer; color:white;">🚪</button>
         </div>
     </div>
 
-    <div id="msg-flow"></div>
+    <div id="chat-flow"></div>
 
-    <div class="footer">
-        <input type="text" id="msg-input" placeholder="اكتب رسالة...">
+    <div class="input-area">
+        <input type="text" id="msg-input" placeholder="اكتب رسالتك هنا...">
         <button class="send-btn" id="send-btn">➤</button>
     </div>
 </div>
@@ -74,7 +66,7 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    let myData = null;
+    let myData = { name: "مستخدم", role: "user" };
 
     onAuthStateChanged(auth, async (user) => {
         if (!user) { window.location.href = "index.html"; return; }
@@ -82,33 +74,29 @@
         const snap = await getDoc(doc(db, "users", user.uid));
         if (snap.exists()) {
             myData = snap.data();
-            document.getElementById('user-display').innerText = myData.name;
-            document.getElementById('role-text').innerText = myData.role === 'owner' ? 'المالك' : (myData.role === 'mod' ? 'مشرف' : 'عضو');
-            if(myData.role === 'owner') document.getElementById('admin-icon').style.display = 'block';
+            document.getElementById('display-name').innerText = myData.name;
+            document.getElementById('display-role').innerText = myData.role === 'owner' ? 'المالك' : 'عضو';
         } else {
-            // حل مشكلة الحسابات القديمة
-            document.getElementById('user-display').innerText = user.email.split('@')[0];
-            document.getElementById('role-text').innerText = "عضو (ملف غير مكتمل)";
-            myData = { name: user.email, role: 'user', status: 'active' };
+            document.getElementById('display-name').innerText = user.email.split('@')[0];
+            document.getElementById('display-role').innerText = "بروفايل غير مكتمل ⚠️";
         }
-        loadChat();
+        loadMessages();
     });
 
-    function loadChat() {
+    function loadMessages() {
         const q = query(collection(db, "messages"), orderBy("createdAt", "asc"));
         onSnapshot(q, (snapshot) => {
-            const flow = document.getElementById('msg-flow');
+            const flow = document.getElementById('chat-flow');
             flow.innerHTML = "";
             snapshot.forEach(res => {
                 const m = res.data();
                 const div = document.createElement('div');
-                div.className = 'msg';
+                div.className = 'message';
                 
-                // صلاحيات الحذف للمالك والمشرف
-                const canDelete = myData.role === 'owner' || (myData.role === 'mod' && m.senderRole === 'user');
-                let tools = canDelete ? `<div class="mod-tools"><span class="del-btn" onclick="deleteMsg('${res.id}')">حذف 🗑️</span></div>` : "";
+                const canDelete = myData.role === 'owner' || m.senderId === auth.currentUser.uid;
+                let delBtn = canDelete ? `<span class="del-msg" onclick="deleteMsg('${res.id}')">حذف 🗑️</span>` : "";
 
-                div.innerHTML = `<b>${m.senderName}</b><br>${m.text}${tools}`;
+                div.innerHTML = `<b>${m.senderName}</b>${m.text}${delBtn}`;
                 flow.appendChild(div);
             });
             flow.scrollTop = flow.scrollHeight;
@@ -117,19 +105,18 @@
 
     document.getElementById('send-btn').onclick = async () => {
         const inp = document.getElementById('msg-input');
-        if(inp.value.trim()){
-            await addDoc(collection(db, "messages"), {
-                text: inp.value,
-                senderName: myData.name || auth.currentUser.email,
-                senderRole: myData.role || 'user',
-                createdAt: serverTimestamp()
-            });
-            inp.value = "";
-        }
+        if(!inp.value.trim()) return;
+        await addDoc(collection(db, "messages"), {
+            text: inp.value,
+            senderId: auth.currentUser.uid,
+            senderName: myData.name || "مجهول",
+            createdAt: serverTimestamp()
+        });
+        inp.value = "";
     };
 
     window.deleteMsg = async (id) => {
-        if(confirm("حذف الرسالة؟")) await deleteDoc(doc(db, "messages", id));
+        if(confirm("هل تريد حذف الرسالة؟")) await deleteDoc(doc(db, "messages", id));
     };
 
     document.getElementById('logout-btn').onclick = () => signOut(auth);
