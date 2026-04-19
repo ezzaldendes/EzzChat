@@ -3,27 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>دخول | Ezz Chat</title>
+    <title>Ezz Chat | الدخول</title>
     <style>
         body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .auth-card { background: white; padding: 25px; border-radius: 15px; width: 90%; max-width: 360px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: #075e54; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
-        .toggle-link { color: #075e54; cursor: pointer; font-size: 14px; margin-top: 15px; display: block; }
+        .card { background: white; padding: 25px; border-radius: 15px; width: 90%; max-width: 360px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #075e54; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .toggle { color: #075e54; cursor: pointer; font-size: 13px; margin-top: 15px; display: block; }
     </style>
 </head>
 <body>
 
-<div class="auth-card">
+<div class="card">
     <h2 style="color: #075e54;">Ezz Chat 🏗️</h2>
-    <div id="reg-inputs">
+    <div id="extra-fields">
         <input type="text" id="reg-name" placeholder="الاسم الكامل">
         <input type="text" id="reg-user" placeholder="اسم المستخدم">
     </div>
     <input type="email" id="email" placeholder="البريد الإلكتروني">
     <input type="password" id="password" placeholder="كلمة المرور">
-    <button id="submit-btn">إنشاء حساب جديد</button>
-    <span class="toggle-link" id="toggle-btn">لديك حساب؟ سجل دخولك</span>
+    <button id="action-btn">إنشاء حساب جديد</button>
+    <span class="toggle" id="toggle-btn">لديك حساب؟ سجل دخولك</span>
 </div>
 
 <script type="module">
@@ -46,33 +46,34 @@
 
     let isLogin = false;
     const toggleBtn = document.getElementById('toggle-btn');
-    const submitBtn = document.getElementById('submit-btn');
-    const regInputs = document.getElementById('reg-inputs');
+    const actionBtn = document.getElementById('action-btn');
+    const extraFields = document.getElementById('extra-fields');
 
     toggleBtn.onclick = () => {
         isLogin = !isLogin;
-        regInputs.style.display = isLogin ? 'none' : 'block';
-        submitBtn.innerText = isLogin ? 'تسجيل دخول' : 'إنشاء حساب جديد';
+        extraFields.style.display = isLogin ? 'none' : 'block';
+        actionBtn.innerText = isLogin ? 'تسجيل دخول' : 'إنشاء حساب جديد';
         toggleBtn.innerText = isLogin ? 'ليس لديك حساب؟ سجل الآن' : 'لديك حساب؟ سجل دخولك';
     };
 
-    submitBtn.onclick = async () => {
+    actionBtn.onclick = async () => {
         const email = document.getElementById('email').value;
         const pass = document.getElementById('password').value;
 
         if (isLogin) {
-            signInWithEmailAndPassword(auth, email, pass).catch(err => alert("خطأ: " + err.message));
+            try { await signInWithEmailAndPassword(auth, email, pass); } 
+            catch (err) { alert("خطأ في الدخول: " + err.message); }
         } else {
             const name = document.getElementById('reg-name').value;
             const username = document.getElementById('reg-user').value;
-            if(!name || !username) return alert("أكمل البيانات");
+            if(!name || !username) return alert("أكمل بياناتك يا مهندس!");
 
-            createUserWithEmailAndPassword(auth, email, pass)
-                .then(async (cred) => {
-                    await setDoc(doc(db, "users", cred.user.uid), {
-                        name, username, email, role: email === "ezzaldendahan@gmail.com" ? "owner" : "user", status: "active"
-                    });
-                }).catch(err => alert("خطأ: " + err.message));
+            try {
+                const cred = await createUserWithEmailAndPassword(auth, email, pass);
+                await setDoc(doc(db, "users", cred.user.uid), {
+                    name, username, email, role: email === "ezzaldendahan@gmail.com" ? "owner" : "user", status: "active"
+                });
+            } catch (err) { alert("خطأ في التسجيل: " + err.message); }
         }
     };
 
@@ -80,137 +81,5 @@
         if (user) window.location.href = "chat.html";
     });
 </script>
-</body>
-</html>
-
-
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-        apiKey: "AIzaSyAdKs4FczUGJYh-_uzfEzndocEx-x1VDAA",
-        authDomain: "ezzchat-org.firebaseapp.com",
-        projectId: "ezzchat-org",
-        storageBucket: "ezzchat-org.firebasestorage.app",
-        messagingSenderId: "704328739546",
-        appId: "1:704328739546:web:57cb68963c10e27c9293e3"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    let isLogin = false;
-    const regFields = document.getElementById('register-fields');
-    const mainBtn = document.getElementById('main-btn');
-    const toggleLink = document.getElementById('toggle-link');
-
-    // تبديل الواجهة للدخول/التسجيل
-    toggleLink.onclick = () => {
-        isLogin = !isLogin;
-        regFields.style.display = isLogin ? 'none' : 'block';
-        mainBtn.innerText = isLogin ? 'تسجيل دخول' : 'إنشاء حساب جديد';
-        toggleLink.innerHTML = isLogin ? 'ليس لديك حساب؟ <b>سجل الآن</b>' : 'لديك حساب بالفعل؟ <b>سجل دخولك</b>';
-    };
-
-    mainBtn.onclick = async () => {
-        const email = document.getElementById('email').value;
-        const pass = document.getElementById('password').value;
-
-        if (isLogin) {
-            signInWithEmailAndPassword(auth, email, pass)
-                .catch(err => alert("عذراً: " + err.message));
-        } else {
-            const name = document.getElementById('reg-name').value;
-            const username = document.getElementById('reg-user').value;
-            if(!name || !username) return alert("يرجى إكمال البيانات المعمارية!");
-
-            createUserWithEmailAndPassword(auth, email, pass)
-                .then(async (cred) => {
-                    await setDoc(doc(db, "users", cred.user.uid), {
-                        name: name,
-                        username: username,
-                        email: email,
-                        role: email === "ezzaldendahan@gmail.com" ? "owner" : "user",
-                        status: "active"
-                    });
-                })
-                .catch(err => alert("خطأ في التسجيل: " + err.message));
-        }
-    };
-
-    onAuthStateChanged(auth, (user) => {
-        if (user) window.location.href = "chat.html";
-    });
-</script>
-
-</body>
-</html>
-    const firebaseConfig = {
-        apiKey: "AIzaSyAdKs4FczUGJYh-_uzfEzndocEx-x1VDAA",
-        authDomain: "ezzchat-org.firebaseapp.com",
-        projectId: "ezzchat-org",
-        storageBucket: "ezzchat-org.firebasestorage.app",
-        messagingSenderId: "704328739546",
-        appId: "1:704328739546:web:57cb68963c10e27c9293e3"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    let isLoginMode = false;
-
-    // تبديل الواجهة
-    const toggleLink = document.getElementById('toggle-link');
-    const submitBtn = document.getElementById('submit-btn');
-    const nameInp = document.getElementById('reg-name');
-    const userInp = document.getElementById('reg-user');
-
-    toggleLink.onclick = () => {
-        isLoginMode = !isLoginMode;
-        nameInp.style.display = isLoginMode ? 'none' : 'block';
-        userInp.style.display = isLoginMode ? 'none' : 'block';
-        submitBtn.innerText = isLoginMode ? 'تسجيل دخول' : 'إنشاء حساب جديد';
-        toggleLink.innerText = isLoginMode ? 'ليس لديك حساب؟ سجل الآن' : 'لديك حساب؟ سجل دخولك';
-    };
-
-    // التنفيذ
-    submitBtn.onclick = async () => {
-        const email = document.getElementById('email').value;
-        const pass = document.getElementById('password').value;
-
-        if (isLoginMode) {
-            signInWithEmailAndPassword(auth, email, pass)
-                .then(() => window.location.href = "chat.html")
-                .catch(err => alert("خطأ في الدخول: " + err.message));
-        } else {
-            const name = nameInp.value;
-            const username = userInp.value;
-            if(!name || !username) return alert("يرجى إكمال البيانات");
-
-            createUserWithEmailAndPassword(auth, email, pass)
-                .then(async (cred) => {
-                    await setDoc(doc(db, "users", cred.user.uid), {
-                        name: name,
-                        username: username,
-                        email: email,
-                        role: email === "ezzaldendahan@gmail.com" ? "owner" : "user",
-                        status: "active"
-                    });
-                    window.location.href = "chat.html";
-                })
-                .catch(err => alert("خطأ في التسجيل: " + err.message));
-        }
-    };
-
-    // إذا كان المستخدم مسجلاً دخولاً بالفعل، انقله للشات فوراً
-    onAuthStateChanged(auth, (user) => {
-        if (user) window.location.href = "chat.html";
-    });
-</script>
-
 </body>
 </html>
