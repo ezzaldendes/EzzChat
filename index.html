@@ -1,108 +1,19 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ezz Chat | منصة العمارة</title>
-    <style>
-        * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #e5ddd5; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .card { background: white; padding: 25px; border-radius: 15px; shadow: 0 4px 15px rgba(0,0,0,0.2); width: 90%; max-width: 400px; text-align: center; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; }
-        button { width: 100%; padding: 12px; background: #075e54; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; transition: 0.3s; }
-        button:hover { background: #128c7e; }
-        #chat-section { display: none; width: 100%; height: 100vh; flex-direction: column; background: #fff; }
-        #messages { flex-grow: 1; overflow-y: auto; padding: 20px; background: #e5ddd5; }
-        .msg { background: white; padding: 10px; border-radius: 10px; margin-bottom: 10px; max-width: 80%; width: fit-content; }
-        .input-area { padding: 15px; display: flex; background: #eee; }
-        .input-area input { flex-grow: 1; margin: 0 10px 0 0; }
-        .input-area button { width: 80px; }
-    </style>
-</head>
-<body>
-
-<div id="auth-section" class="card">
-    <h2 style="color: #075e54;">Ezz Chat 🏗️</h2>
-    <p>مرحباً بك في مجتمع المصممين</p>
-    <input type="email" id="email" placeholder="البريد الإلكتروني">
-    <input type="password" id="password" placeholder="كلمة المرور">
-    <button id="auth-btn">دخول / تسجيل جديد</button>
-</div>
-
-<div id="chat-section">
-    <div style="background: #075e54; color: white; padding: 15px; display: flex; justify-content: space-between;">
-        <span id="user-email"></span>
-        <button onclick="location.reload()" style="width: auto; padding: 5px 10px; background: #dc3545;">خروج</button>
-    </div>
-    <div id="messages"></div>
-    <div class="input-area">
-        <input type="text" id="msg-input" placeholder="اكتب رسالتك هنا...">
-        <button id="send-btn">إرسال</button>
+<div class="auth-card">
+    <h2>Ezz Chat 🏗️</h2>
+    <div id="auth-forms">
+        <input type="text" id="reg-name" placeholder="الاسم الكامل">
+        <input type="text" id="reg-user" placeholder="اسم المستخدم">
+        <input type="email" id="auth-email" placeholder="البريد الإلكتروني">
+        <input type="password" id="auth-pass" placeholder="كلمة المرور">
+        <button id="btn-action" class="btn-primary">إنشاء حساب</button>
+        <p onclick="toggleMode()" id="toggle-text">لديك حساب؟ سجل دخولك</p>
     </div>
 </div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-        apiKey: "AIzaSyAdKs4FczUGJYh-_uzfEzndocEx-x1VDAA",
-        authDomain: "ezzchat-org.firebaseapp.com",
-        projectId: "ezzchat-org",
-        storageBucket: "ezzchat-org.firebasestorage.app",
-        messagingSenderId: "704328739546",
-        appId: "1:704328739546:web:57cb68963c10e27c9293e3"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    const authBtn = document.getElementById('auth-btn');
-    const sendBtn = document.getElementById('send-btn');
-
-    // وظيفة الدخول والتسجيل
-    authBtn.addEventListener('click', () => {
-        const email = document.getElementById('email').value;
-        const pass = document.getElementById('password').value;
-        if(!email || !pass) return alert("يرجى ملء البيانات");
-
-        signInWithEmailAndPassword(auth, email, pass)
-            .catch(() => createUserWithEmailAndPassword(auth, email, pass))
-            .catch(err => alert("خطأ: " + err.message));
-    });
-
-    // مراقبة حالة المستخدم
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            document.getElementById('auth-section').style.display = 'none';
-            document.getElementById('chat-section').style.display = 'flex';
-            document.getElementById('user-email').innerText = user.email;
-            
-            // تحميل الرسائل
-            const q = query(collection(db, "messages"), orderBy("createdAt", "asc"));
-            onSnapshot(q, (snapshot) => {
-                const msgsDiv = document.getElementById('messages');
-                msgsDiv.innerHTML = "";
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const div = document.createElement('div');
-                    div.className = 'msg';
-                    div.innerHTML = `<small style="color:blue">${data.sender.split('@')[0]}</small><br>${data.text}`;
-                    msgsDiv.appendChild(div);
-                });
-                msgsDiv.scrollTop = msgsDiv.scrollHeight;
-            });
-        }
-    });
-
-    // إرسال الرسائل
-    sendBtn.addEventListener('click', async () => {
-        const input = document.getElementById('msg-input');
-        if (input.value.trim()) {
-            await addDoc(collection(db, "messages"), {
-                text: input.value,
+    // عند نجاح الدخول، نستخدم هذا الكود للانتقال لصفحة الشات:
+    // window.location.href = "chat.html";
+</script>
                 sender: auth.currentUser.email,
                 createdAt: serverTimestamp()
             });
