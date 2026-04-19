@@ -2,31 +2,38 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ezz Chat | الدخول</title>
     <style>
-        :root { --primary: #075e54; }
-        body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .auth-card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 90%; max-width: 380px; text-align: center; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; }
-        .toggle-ptr { color: blue; cursor: pointer; font-size: 14px; margin-top: 15px; display: block; }
+        :root { --primary: #075e54; --bg: #f0f2f5; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .login-card { background: white; width: 90%; max-width: 360px; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
+        h2 { color: var(--primary); margin-bottom: 20px; font-size: 24px; }
+        .input-group { margin-bottom: 15px; }
+        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; outline: none; transition: 0.3s; box-sizing: border-box; }
+        input:focus { border-color: var(--primary); box-shadow: 0 0 5px rgba(7,94,84,0.2); }
+        button { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:active { transform: scale(0.98); }
+        .toggle-text { margin-top: 15px; font-size: 14px; color: #666; cursor: pointer; display: block; }
+        .toggle-text b { color: var(--primary); }
     </style>
 </head>
 <body>
 
-<div class="auth-card">
-    <h2 style="color: var(--primary);">Ezz Chat 🏗️</h2>
-    <div id="form-container">
-        <input type="text" id="reg-name" placeholder="الاسم الكامل">
-        <input type="text" id="reg-user" placeholder="اسم المستخدم">
-        
-        <input type="email" id="email" placeholder="البريد الإلكتروني">
-        <input type="password" id="password" placeholder="كلمة المرور">
-        
-        <button id="submit-btn">إنشاء حساب جديد</button>
-        <span class="toggle-ptr" id="toggle-link">لديك حساب؟ سجل دخولك</span>
+<div class="login-card">
+    <h2>Ezz Chat 🏗️</h2>
+    
+    <div id="register-fields">
+        <div class="input-group"><input type="text" id="reg-name" placeholder="الاسم الكامل"></div>
+        <div class="input-group"><input type="text" id="reg-user" placeholder="اسم المستخدم"></div>
     </div>
+    
+    <div class="input-group"><input type="email" id="email" placeholder="البريد الإلكتروني"></div>
+    <div class="input-group"><input type="password" id="password" placeholder="كلمة المرور"></div>
+    
+    <button id="main-btn">إنشاء حساب جديد</button>
+    
+    <span class="toggle-text" id="toggle-link">لديك حساب بالفعل؟ <b>سجل دخولك</b></span>
 </div>
 
 <script type="module">
@@ -34,6 +41,65 @@
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+    const firebaseConfig = {
+        apiKey: "AIzaSyAdKs4FczUGJYh-_uzfEzndocEx-x1VDAA",
+        authDomain: "ezzchat-org.firebaseapp.com",
+        projectId: "ezzchat-org",
+        storageBucket: "ezzchat-org.firebasestorage.app",
+        messagingSenderId: "704328739546",
+        appId: "1:704328739546:web:57cb68963c10e27c9293e3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let isLogin = false;
+    const regFields = document.getElementById('register-fields');
+    const mainBtn = document.getElementById('main-btn');
+    const toggleLink = document.getElementById('toggle-link');
+
+    // تبديل الواجهة للدخول/التسجيل
+    toggleLink.onclick = () => {
+        isLogin = !isLogin;
+        regFields.style.display = isLogin ? 'none' : 'block';
+        mainBtn.innerText = isLogin ? 'تسجيل دخول' : 'إنشاء حساب جديد';
+        toggleLink.innerHTML = isLogin ? 'ليس لديك حساب؟ <b>سجل الآن</b>' : 'لديك حساب بالفعل؟ <b>سجل دخولك</b>';
+    };
+
+    mainBtn.onclick = async () => {
+        const email = document.getElementById('email').value;
+        const pass = document.getElementById('password').value;
+
+        if (isLogin) {
+            signInWithEmailAndPassword(auth, email, pass)
+                .catch(err => alert("عذراً: " + err.message));
+        } else {
+            const name = document.getElementById('reg-name').value;
+            const username = document.getElementById('reg-user').value;
+            if(!name || !username) return alert("يرجى إكمال البيانات المعمارية!");
+
+            createUserWithEmailAndPassword(auth, email, pass)
+                .then(async (cred) => {
+                    await setDoc(doc(db, "users", cred.user.uid), {
+                        name: name,
+                        username: username,
+                        email: email,
+                        role: email === "ezzaldendahan@gmail.com" ? "owner" : "user",
+                        status: "active"
+                    });
+                })
+                .catch(err => alert("خطأ في التسجيل: " + err.message));
+        }
+    };
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) window.location.href = "chat.html";
+    });
+</script>
+
+</body>
+</html>
     const firebaseConfig = {
         apiKey: "AIzaSyAdKs4FczUGJYh-_uzfEzndocEx-x1VDAA",
         authDomain: "ezzchat-org.firebaseapp.com",
