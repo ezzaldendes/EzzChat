@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الملف الشخصي</title>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; display: flex; justify-content: center; }
+        .card { background: white; padding: 20px; border-radius: 15px; width: 100%; max-width: 400px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .btn-save { background: #075e54; color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; cursor: pointer; }
+        .btn-back { background: #666; color: white; border: none; padding: 10px; border-radius: 8px; width: 100%; cursor: pointer; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h3>تعديل الملف الشخصي 👤</h3>
+        <input type="text" id="edit-name" placeholder="الاسم الكامل">
+        <input type="text" id="edit-username" placeholder="اسم المستخدم">
+        <p id="role-display" style="font-size: 12px; color: gray;"></p>
+        <button class="btn-save" id="save-btn">حفظ التعديلات</button>
+        <button class="btn-back" onclick="window.location.href='chat.html'">رجوع للدردشة</button>
+    </div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAdKs4FczUGJYh-_uzfEzndocEx-x1VDAA",
+        authDomain: "ezzchat-org.firebaseapp.com",
+        projectId: "ezzchat-org",
+        storageBucket: "ezzchat-org.firebasestorage.app",
+        messagingSenderId: "704328739546",
+        appId: "1:704328739546:web:57cb68963c10e27c9293e3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) window.location.href = "index.html";
+        const snap = await getDoc(doc(db, "users", user.uid));
+        if (snap.exists()) {
+            document.getElementById('edit-name').value = snap.data().name;
+            document.getElementById('edit-username').value = snap.data().username;
+            document.getElementById('role-display').innerText = "رتبتك: " + (snap.data().role === 'owner' ? 'المالك' : 'عضو');
+        }
+    });
+
+    document.getElementById('save-btn').onclick = async () => {
+        const n = document.getElementById('edit-name').value;
+        const u = document.getElementById('edit-username').value;
+        await updateDoc(doc(db, "users", auth.currentUser.uid), { name: n, username: u });
+        alert("تم التحديث!");
+    };
+</script>
+</body>
+</html>
