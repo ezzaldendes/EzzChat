@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ezz Chat - مشروع الدردشة</title>
+    <style>
+        :root { --main-color: #075e54; --bg-color: #e5ddd5; }
+        body { font-family: sans-serif; background: var(--bg-color); margin: 0; }
+        .hidden { display: none !important; }
+        
+        /* واجهة الدخول */
+        #auth-screen { height: 100vh; display: flex; align-items: center; justify-content: center; background: white; }
+        .auth-box { width: 90%; max-width: 350px; text-align: center; padding: 20px; border: 1px solid #ddd; border-radius: 10px; }
+        
+        /* واجهة الدردشة */
+        #chat-screen { display: flex; flex-direction: column; height: 100vh; }
+        header { background: var(--main-color); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        
+        #rooms-bar { background: #eee; padding: 10px; display: flex; gap: 10px; overflow-x: auto; border-bottom: 1px solid #ccc; }
+        .room-btn { padding: 5px 15px; background: white; border: 1px solid #ccc; border-radius: 15px; cursor: pointer; white-space: nowrap; }
+        .room-btn.active { background: var(--main-color); color: white; border-color: var(--main-color); }
+        
+        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 8px 12px; border-radius: 10px; max-width: 80%; font-size: 0.9em; line-height: 1.4; position: relative; }
+        .sent { align-self: flex-end; background: #dcf8c6; border: 1px solid #c7e9ae; }
+        .received { align-self: flex-start; background: white; border: 1px solid #ddd; }
+        .admin-tag { color: red; font-weight: bold; font-size: 0.8em; }
+        
+        #input-area { background: #f0f0f0; padding: 10px; display: flex; gap: 8px; }
+        input { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid #ddd; outline: none; }
+        button.send-btn { background: var(--main-color); color: white; border: none; padding: 0 20px; border-radius: 20px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-screen">
+        <div class="auth-box">
+            <h2>Ezz Chat</h2>
+            <input type="email" id="email" placeholder="البريد الإلكتروني">
+            <input type="password" id="password" placeholder="كلمة السر">
+            <button onclick="handleAuth('login')" style="background:var(--main-color); color:white; width:100%; padding:10px; border-radius:5px; border:none; margin-top:10px;">تسجيل دخول</button>
+            <button onclick="handleAuth('signup')" style="background:#555; color:white; width:100%; padding:10px; border-radius:5px; border:none; margin-top:5px;">إنشاء حساب جديد</button>
+        </div>
+    </div>
+
+    <div id="chat-screen" class="hidden">
+        <header>
+            <span id="user-info">جاري التحميل...</span>
+            <button onclick="logout()" style="background:none; border:1px solid white; color:white; border-radius:5px; padding:2px 10px; cursor:pointer;">خروج</button>
+        </header>
+
+        <div id="rooms-bar">
+            <div class="room-btn active" onclick="switchRoom('general', this)">العامة</div>
+            <div class="room-btn" onclick="switchRoom('arch', this)">قسم العمارة</div>
+            <div class="room-btn" onclick="switchRoom('design', this)">قسم التصميم</div>
+        </div>
+
+        <div id="messages"></div>
+
+        <div id="input-area">
+            <input type="text" id="msgInput" placeholder="اكتب رسالتك...">
+            <button class="send-btn" onclick="sendMessage()">إرسال</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // الـ Config الخاص بك
+        const firebaseConfig = {
+            apiKey: "AIzaSyAdKs4FczUGJYh-_uzfEzndocEx-x1VDAA",
+            authDomain: "ezzchat-org.firebaseapp.com",
+            projectId: "ezzchat-org",
+            storageBucket: "ezzchat-org.firebasestorage.app",
+            messagingSenderId: "704328739546",
+            appId: "1:704328739546:web:57cb68963c10e27c9293e3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentRoom = 'general';
+        let unsubscribe = null;
+
+        // دالة الدخول والتسجيل
+        window.handleAuth = async (type) => {
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('password').value;
+            try {
+                if(type === 'signup') await createUserWithEmailAndPassword(auth, email, pass);
+                else await signInWithEmailAndPassword(auth, email, pass);
+            } catch (e) { alert("خطأ: " + e.message); }
+        };
+
+        // مراقبة حالة المستخدم
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('chat-screen').classList.remove('hidden');
+                document.getElementById('user-info').innerText = user.email.split('@')[0];
+                switchRoom('general');
+            } else {
+                document.getElementById('auth-screen').classList.remove('hidden');
+                document.getElementById('chat-screen').classList.add('hidden');
+            }
+        });
+
+        // تبديل الغرف
+        window.switchRoom = (roomName, btn) => {
+            currentRoom = roomName;
+            if(btn) {
+                document.querySelectorAll('.room-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            }
+            loadMessages();
+        };
+
+        // إرسال رسالة
+        window.sendMessage = async () => {
+            const input = document.getElementById('msgInput');
+            if(!input.value.trim()) return;
+            
+            await addDoc(collection(db, "rooms", currentRoom, "messages"), {
+                text: input.value,
+                sender: auth.currentUser.email,
+                time: serverTimestamp()
+            });
+            input.value = "";
+        };
+
+        // تحميل الرسائل
+        function loadMessages() {
+            if(unsubscribe) unsubscribe(); // إلغاء الاشتراك القديم عند تبديل الغرفة
+            
+            const q = query(collection(
+
